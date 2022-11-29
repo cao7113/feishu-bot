@@ -18,6 +18,10 @@ defmodule FeishuBot.CustomBot do
     }
   end
 
+  @doc """
+  Send text message
+  iex> Bot.send_text("hi feishu)
+  """
   def send_text(text, opts \\ []) when is_binary(text) do
     %{
       msg_type: "text",
@@ -33,8 +37,18 @@ defmodule FeishuBot.CustomBot do
     msg = get_sign_info(msg, bot.sign_key)
     path = @webhook_bot_path <> "/" <> bot.hook_id
 
-    base_req(opts)
-    |> Req.post!(url: path, json: msg)
+    base_keys = [:debug]
+    {base_opts, req_opts} = Keyword.split(opts, base_keys)
+
+    post_opts =
+      [
+        url: path,
+        json: msg
+      ]
+      |> Keyword.merge(req_opts)
+
+    base_req(base_opts)
+    |> Req.post!(post_opts)
   end
 
   def get_sign_info(info, nil), do: info
@@ -66,7 +80,22 @@ defmodule FeishuBot.CustomBot do
     )
   end
 
-  def base_req(_opts \\ []) do
-    Req.new(base_url: @open_host)
+  def base_req(opts \\ []) do
+    req = Req.new(base_url: @open_host)
+
+    case opts[:debug] do
+      true ->
+        req
+        |> Req.Request.prepend_response_steps(
+          debug: fn {%{method: mthd, url: url, headers: _} = _req, _resp} = rr ->
+            IO.puts("#{mthd |> to_string |> String.upcase()} #{url}")
+
+            rr
+          end
+        )
+
+      _ ->
+        req
+    end
   end
 end
