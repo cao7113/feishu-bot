@@ -4,16 +4,17 @@ defmodule FeishuBot.CustomBot do
   """
   require Logger
 
+  @open_host "https://open.feishu.cn"
+
   @enforce_keys [:hook_id]
-  defstruct hook_id: "", sign_key: nil, client: nil
+  defstruct hook_id: "", sign_key: nil
 
   @webhook_bot_path "/open-apis/bot/v2/hook"
 
   def new(hook_id, opts \\ []) do
     %__MODULE__{
       hook_id: hook_id,
-      sign_key: opts[:sign_key],
-      client: opts[:client] || FeishuBot.Client.new(opts)
+      sign_key: opts[:sign_key]
     }
   end
 
@@ -29,26 +30,28 @@ defmodule FeishuBot.CustomBot do
 
   def send_msg(msg, opts \\ []) when is_map(msg) and is_list(opts) do
     bot = opts[:bot] || default_bot()
-    msg = with_sign_info(msg, bot.sign_key)
+    msg = get_sign_info(msg, bot.sign_key)
     path = @webhook_bot_path <> "/" <> bot.hook_id
-    Tesla.post(bot.client, path, msg)
+
+    base_req(opts)
+    |> Req.post!(url: path, json: msg)
   end
 
-  def with_sign_info(info, nil), do: info
+  def get_sign_info(info, nil), do: info
 
-  def with_sign_info(%{} = info, secret) when is_binary(secret) do
+  def get_sign_info(%{} = info, secret) when is_binary(secret) do
     tm =
       DateTime.utc_now()
       |> DateTime.to_unix()
 
     %{
       timestamp: tm |> to_string(),
-      sign: gen_sign(secret, tm)
+      sign: gen_signature(secret, tm)
     }
     |> Map.merge(info)
   end
 
-  def gen_sign(secret, timestamp) when is_binary(secret) do
+  def gen_signature(secret, timestamp) when is_binary(secret) do
     key = "#{timestamp}\n#{secret}"
 
     :crypto.mac(:hmac, :sha256, key, "")
@@ -61,5 +64,9 @@ defmodule FeishuBot.CustomBot do
       opts
       |> Keyword.merge(sign_key: System.get_env("FEISHU_BOT_DEFAULT_SIGN_KEY"))
     )
+  end
+
+  def base_req(_opts \\ []) do
+    Req.new(base_url: @open_host)
   end
 end

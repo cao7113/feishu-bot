@@ -32,10 +32,16 @@ defmodule FeishuBot.CustomBotTest do
     end
   end
 
-  test "gen_sign" do
+  test "gen_signature" do
     sec = "zJlvvSoQWuukwGnCzBVtve"
     want = "jW2NVlpvB/5izBjoq8Kmrt6eddAeHPz2BSCfiXo3v9U="
-    got = CustomBot.gen_sign(sec, 1_664_944_271)
+    got = CustomBot.gen_signature(sec, 1_664_944_271)
     assert got == want
+  end
+
+  @tag :manual
+  test "get_sign_info" do
+    CustomBot.get_sign_info(%{something: "test"}, "testsecret")
+    |> IO.inspect(label: "with-sign-info")
   end
 end

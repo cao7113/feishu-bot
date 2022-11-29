@@ -1,3 +1,5 @@
 defmodule FeishuBot do
-  @moduledoc false
+  @moduledoc """
+  Feishu bot, see CustomBot
+  """
 end
